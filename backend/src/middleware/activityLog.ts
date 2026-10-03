@@ -4,7 +4,7 @@ import prisma from '../lib/prisma';
 const LOGGED_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 
 export function activityLogger(req: Request, res: Response, next: NextFunction) {
-  if (!LOGGED_METHODS.has(req.method)) return next();
+  if (!LOGGED_METHODS.has(req.method) || req.originalUrl.startsWith('/api/visites')) return next();
 
   res.on('finish', () => {
     prisma.activityLog

@@ -20,10 +20,12 @@ import essaisRouter from './routes/essais';
 import messagesRouter from './routes/messages';
 import consignesRouter from './routes/consignes';
 import reclamationsRouter from './routes/reclamations';
+import visitesRouter from './routes/visites';
 import { activityLogger } from './middleware/activityLog';
 import { startReleveCron } from './cron';
 
 const app = express();
+app.set('trust proxy', true);
 const PORT = process.env.PORT || 3001;
 
 const allowedOrigins = (process.env.CORS_ORIGIN || 'http://localhost:5173')
@@ -57,6 +59,7 @@ app.use('/api/essais', essaisRouter);
 app.use('/api/messages', messagesRouter);
 app.use('/api/consignes', consignesRouter);
 app.use('/api/reclamations', reclamationsRouter);
+app.use('/api/visites', visitesRouter);
 
 app.get('/api/health', (_, res) => res.json({ status: 'ok', time: new Date() }));
 

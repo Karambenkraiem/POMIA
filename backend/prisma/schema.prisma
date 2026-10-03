@@ -817,3 +817,18 @@ model ReclamationCommentaire {
   @@map("reclamations_commentaires")
 }
 
+
+// ── Visites du site (statistiques anonymes) ──
+// Aucune adresse IP n'est stockée : seuls le pays, la région, la ville et un
+// identifiant haché quotidien (changeant chaque jour) sont conservés.
+model Visite {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  pays          String   @db.VarChar(10)
+  region        String?  @db.VarChar(20)
+  ville         String?  @db.VarChar(100)
+  visiteur_hash String   @db.VarChar(64)
+  cree_le       DateTime @default(now()) @db.Timestamptz(6)
+
+  @@index([cree_le])
+  @@map("visites")
+}

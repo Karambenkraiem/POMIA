@@ -235,3 +235,9 @@ export const essaisApi = {
   historique: (essaiId: string) => api.get(`/essais/${essaiId}/instances`).then((r) => r.data),
   getInstance: (essaiId: string, instanceId: string) => api.get(`/essais/${essaiId}/instances/${instanceId}`).then((r) => r.data),
 };
+
+// Statistiques de visites (anonymes)
+export const visitesApi = {
+  enregistrer: () => api.post('/visites').then((r) => r.data),
+  stats: (jours: number) => api.get('/visites/stats', { params: { jours } }).then((r) => r.data),
+};

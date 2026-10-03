@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { Component, ReactNode } from 'react';
+import { Component, ReactNode, useEffect } from 'react';
+import { visitesApi } from './lib/api';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { SelectedDateProvider } from './contexts/SelectedDateContext';
@@ -43,6 +44,7 @@ import EssaiHistorique from './pages/EssaiHistorique';
 import EssaisConfig from './pages/admin/EssaisConfig';
 import Consignes from './pages/Consignes';
 import Reclamations from './pages/Reclamations';
+import Visites from './pages/admin/Visites';
 import ReclamationDetail from './pages/ReclamationDetail';
 import InstallPrompt from './components/InstallPrompt';
 import AndroidBackButton from './components/AndroidBackButton';
@@ -69,6 +71,21 @@ function AdminRoute({ children }: { children: JSX.Element }) {
     return <Navigate to="/" replace />;
   }
   return children;
+}
+
+function AdminOnlyRoute({ children }: { children: JSX.Element }) {
+  const { user } = useAuth();
+  if (user?.role !== 'admin') return <Navigate to="/" replace />;
+  return children;
+}
+
+function VisiteTracker() {
+  useEffect(() => {
+    if (sessionStorage.getItem('pomia_visite')) return;
+    sessionStorage.setItem('pomia_visite', '1');
+    visitesApi.enregistrer().catch(() => {});
+  }, []);
+  return null;
 }
 
 function AnalyseRoute({ children }: { children: JSX.Element }) {
@@ -111,6 +128,7 @@ export default function App() {
       <AuthProvider>
       <SelectedDateProvider>
         <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+          <VisiteTracker />
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
@@ -134,6 +152,7 @@ export default function App() {
               <Route path="essai" element={<Essai />} />
               <Route path="essai/:essaiId" element={<EssaiHistorique />} />
               <Route path="admin/essais" element={<AdminRoute><EssaisConfig /></AdminRoute>} />
+              <Route path="admin/visites" element={<AdminOnlyRoute><Visites /></AdminOnlyRoute>} />
               <Route path="consignes" element={<ConsigneRoute><Consignes /></ConsigneRoute>} />
               <Route path="reclamations" element={<ReclamationRoute><Reclamations /></ReclamationRoute>} />
               <Route path="reclamations/:id" element={<ReclamationRoute><ReclamationDetail /></ReclamationRoute>} />

@@ -36,6 +36,7 @@ const adminItems = [
   { to: '/admin/seuils', icon: Settings, label: 'Seuils d\'alerte' },
   { to: '/admin/logs', icon: History, label: 'Journal d\'activité' },
   { to: '/admin/essais', icon: ClipboardCheck, label: 'Essais (paramétrage)' },
+  { to: '/admin/visites', icon: BarChart3, label: 'Visites du site', adminOnly: true },
 ];
 
 const COLLAPSE_KEY = 'pomia_sidebar_collapsed';
@@ -154,7 +155,7 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
           <div className="mt-4">
             {!collapsed && <p className="px-3 text-xs font-medium text-slate-500 uppercase tracking-wider mb-1">Administration</p>}
             <div className="space-y-0.5">
-              {adminItems.map(({ to, icon: Icon, label }) => (
+              {adminItems.filter((i) => !i.adminOnly || user?.role === 'admin').map(({ to, icon: Icon, label }) => (
                 <NavLink
                   key={to}
                   to={to}
