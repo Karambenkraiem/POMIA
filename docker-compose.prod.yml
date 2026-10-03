@@ -1,0 +1,61 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: pomia_postgres_prod
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: pomia
+      POSTGRES_USER: pomia
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - pomia_postgres_data:/var/lib/postgresql/data
+    networks:
+      - internal
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pomia -d pomia"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: pomia_backend_prod
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://pomia:${POSTGRES_PASSWORD}@postgres:5432/pomia
+      JWT_SECRET: ${JWT_SECRET}
+      PORT: 3001
+      NODE_ENV: production
+      CORS_ORIGIN: https://pomia.alkaramsoft.ovh,capacitor://localhost,https://localhost,http://localhost
+      TZ: Africa/Tunis
+      DEMO_LOGIN: "true"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - internal
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: pomia_frontend_prod
+    restart: unless-stopped
+    depends_on:
+      - backend
+    volumes:
+      - ./apk-downloads:/usr/share/nginx/html/downloads:ro
+    networks:
+      - internal
+      - proxy_net
+
+volumes:
+  pomia_postgres_data:
+
+networks:
+  internal:
+    driver: bridge
+  proxy_net:
+    external: true

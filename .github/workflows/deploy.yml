@@ -1,0 +1,143 @@
+name: Deploy POMIA
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  test-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build backend image (test)
+        run: docker build -t pomia-backend-ci ./backend
+
+      - name: Build frontend image (test)
+        run: docker build -t pomia-frontend-ci ./frontend
+
+  build-android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm install
+
+      - name: Build web assets (mobile API URL)
+        working-directory: frontend
+        run: npm run build:mobile
+
+      - name: Sync Capacitor Android project
+        working-directory: frontend
+        run: npx cap sync android
+
+      - name: Ensure gradlew is executable
+        working-directory: frontend/android
+        run: chmod +x gradlew
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Set up Android SDK
+        # android-actions/setup-android tries to install the long-deprecated
+        # "tools" package, which Google has since removed from the SDK
+        # repository entirely, so sdkmanager now fails outright. Set up the
+        # command-line tools ourselves instead, skipping that package — the
+        # Android Gradle Plugin downloads whatever platform/build-tools the
+        # project needs on its own once licenses are accepted.
+        run: |
+          export ANDROID_HOME="$HOME/android-sdk"
+          mkdir -p "$ANDROID_HOME/cmdline-tools"
+          cd "$ANDROID_HOME/cmdline-tools"
+          curl -sSLo cmdline-tools.zip https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
+          unzip -q cmdline-tools.zip
+          rm cmdline-tools.zip
+          mv cmdline-tools latest
+          echo "ANDROID_HOME=$ANDROID_HOME" >> "$GITHUB_ENV"
+          echo "ANDROID_SDK_ROOT=$ANDROID_HOME" >> "$GITHUB_ENV"
+          echo "$ANDROID_HOME/cmdline-tools/latest/bin" >> "$GITHUB_PATH"
+          echo "$ANDROID_HOME/platform-tools" >> "$GITHUB_PATH"
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platform-tools"
+
+      - name: Decode release keystore
+        working-directory: frontend/android/app
+        run: echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > release.keystore
+
+      - name: Build signed release APK
+        working-directory: frontend/android
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          APP_VERSION_CODE: ${{ github.run_number }}
+          APP_VERSION_NAME: 1.0.${{ github.run_number }}
+        run: ./gradlew assembleRelease --no-daemon
+
+      - name: Remove keystore from runner
+        if: always()
+        working-directory: frontend/android/app
+        run: rm -f release.keystore
+
+      - name: Rename APK and write version manifest
+        run: |
+          cp frontend/android/app/build/outputs/apk/release/app-release.apk pomia.apk
+          printf '{"versionCode": %s, "versionName": "1.0.%s"}' "${{ github.run_number }}" "${{ github.run_number }}" > version.json
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: pomia-apk
+          path: |
+            pomia.apk
+            version.json
+          retention-days: 5
+
+  # Séparé du déploiement APK : un échec du build Android ne doit jamais
+  # empêcher le site/backend de partir en prod.
+  deploy-backend:
+    needs: [test-build]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy over SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_SSH_PORT || 22 }}
+          script: |
+            cd ${{ secrets.VPS_PROJECT_PATH }}
+            git pull origin main
+            docker compose -f docker-compose.prod.yml build
+            docker compose -f docker-compose.prod.yml up -d
+            docker image prune -f
+
+  deploy-android:
+    needs: [build-android]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download APK artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: pomia-apk
+
+      - name: Upload APK to VPS
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_SSH_PORT || 22 }}
+          source: pomia.apk,version.json
+          target: ${{ secrets.VPS_PROJECT_PATH }}/apk-downloads

@@ -1,0 +1,215 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    @apply bg-slate-950 text-slate-100 antialiased;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  }
+
+  input[type="number"]::-webkit-inner-spin-button,
+  input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  input[type="number"] {
+    -moz-appearance: textfield;
+  }
+
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-slate-700 rounded-full;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-slate-600;
+  }
+}
+
+/* ═══════════════════════════════════════════════
+   MODE CLAIR — INDUSTRIEL / HAUTE LISIBILITÉ
+   Palette : acier + marine + ambre (HMI/SCADA)
+   ═══════════════════════════════════════════════ */
+
+html.light {
+  /* variables locales pour faciliter la lecture */
+  --l-page:    #c8d6e0;   /* fond de page : gris acier */
+  --l-card:    #eef3f7;   /* cartes / panneaux        */
+  --l-surface: #dde6ed;   /* surfaces secondaires     */
+  --l-input:   #ffffff;   /* champs de saisie         */
+  --l-border:  #7a9ab0;   /* bordures visibles        */
+  --l-border2: #5c7d96;   /* bordures fortes          */
+  --l-txt1:    #010c17;   /* texte principal          */
+  --l-txt2:    #091e30;   /* texte secondaire         */
+  --l-txt3:    #163347;   /* texte atténué            */
+  --l-txt4:    #254d66;   /* texte très atténué       */
+}
+
+html.light body {
+  background-color: var(--l-page) !important;
+  color: var(--l-txt1) !important;
+}
+
+html.light ::-webkit-scrollbar-thumb       { background-color: #7a9ab0 !important; }
+html.light ::-webkit-scrollbar-thumb:hover { background-color: #5c7d96 !important; }
+
+/* ── Backgrounds ── */
+html.light .bg-slate-950 { background-color: var(--l-page)    !important; }
+html.light .bg-slate-900 { background-color: var(--l-card)    !important; }
+html.light .bg-slate-800 { background-color: var(--l-surface) !important; }
+html.light .bg-slate-700 { background-color: #cdd9e2          !important; }
+html.light .bg-slate-600 { background-color: #afc0cc          !important; }
+
+/* opacity variants */
+html.light .bg-slate-800\/20 { background-color: rgba(221,230,237,0.35) !important; }
+html.light .bg-slate-800\/30 { background-color: rgba(221,230,237,0.40) !important; }
+html.light .bg-slate-800\/40 { background-color: rgba(221,230,237,0.55) !important; }
+html.light .bg-slate-800\/50 { background-color: rgba(221,230,237,0.65) !important; }
+html.light .bg-slate-800\/60 { background-color: rgba(221,230,237,0.75) !important; }
+html.light .bg-slate-800\/90 { background-color: rgba(221,230,237,0.95) !important; }
+html.light .bg-slate-900\/50 { background-color: rgba(238,243,247,0.85) !important; }
+html.light .bg-slate-900\/95 { background-color: rgba(238,243,247,0.97) !important; }
+html.light .bg-slate-700\/40 { background-color: rgba(205,217,226,0.55) !important; }
+html.light .bg-slate-600\/60 { background-color: rgba(175,192,204,0.75) !important; }
+html.light .bg-cyan-500\/15  { background-color: rgba(6,182,212,0.14)   !important; }
+html.light .bg-amber-500\/5  { background-color: rgba(245,158,11,0.08)  !important; }
+html.light .bg-amber-500\/10 { background-color: rgba(245,158,11,0.14)  !important; }
+
+/* ── Hover ── */
+html.light .hover\:bg-slate-800:hover        { background-color: var(--l-surface) !important; }
+html.light .hover\:bg-slate-700:hover        { background-color: #cdd9e2          !important; }
+html.light .hover\:bg-slate-800\/20:hover    { background-color: rgba(221,230,237,0.35) !important; }
+html.light .hover\:bg-slate-800\/30:hover    { background-color: rgba(221,230,237,0.40) !important; }
+html.light .hover\:bg-slate-800\/50:hover    { background-color: rgba(221,230,237,0.60) !important; }
+
+/* ── Textes ── */
+html.light .text-white      { color: var(--l-txt1) !important; }
+html.light .hover\:text-white:hover { color: var(--l-txt1) !important; }
+html.light .text-slate-100  { color: var(--l-txt1) !important; }
+html.light .text-slate-200  { color: var(--l-txt1) !important; }
+html.light .text-slate-300  { color: var(--l-txt2) !important; }
+html.light .text-slate-400  { color: var(--l-txt3) !important; }
+html.light .text-slate-500  { color: var(--l-txt4) !important; }
+html.light .text-slate-600  { color: var(--l-txt4) !important; }
+
+/* texte sur boutons amber/cyan : garde le quasi-noir */
+html.light .text-slate-900  { color: #010c17 !important; }
+
+/* ── Borders ── */
+html.light .border-slate-900 { border-color: var(--l-border)  !important; }
+html.light .border-slate-800 { border-color: var(--l-border)  !important; }
+html.light .border-slate-700 { border-color: var(--l-border)  !important; }
+html.light .border-slate-600 { border-color: var(--l-border2) !important; }
+
+/* ── Divide ── */
+html.light .divide-slate-800 > * + * { border-color: var(--l-border) !important; }
+html.light .divide-slate-700 > * + * { border-color: var(--l-border) !important; }
+
+/* ── Inputs / Textarea / Select ── */
+html.light input:not([type="checkbox"]):not([type="radio"]),
+html.light textarea,
+html.light select {
+  background-color: var(--l-input)   !important;
+  color:            var(--l-txt1)    !important;
+  border-color:     var(--l-border2) !important;
+}
+html.light input::placeholder,
+html.light textarea::placeholder { color: var(--l-txt4) !important; }
+
+html.light input:focus,
+html.light textarea:focus,
+html.light select:focus {
+  border-color: #f59e0b !important;
+  box-shadow: 0 0 0 2px rgba(245,158,11,0.20) !important;
+}
+
+/* ── Sidebar : fond clair, texte noir, sélection ambre ── */
+html.light aside {
+  background-color: #eef3f7 !important;
+  border-color:     #7a9ab0 !important;
+}
+html.light aside .text-white      { color: #010c17 !important; }
+html.light aside .text-slate-400  { color: #163347 !important; }
+html.light aside .text-slate-500  { color: #254d66 !important; }
+html.light aside .hover\:text-white:hover { color: #010c17 !important; }
+html.light aside .border-slate-700 { border-color: #7a9ab0 !important; }
+html.light aside .hover\:bg-slate-800:hover { background-color: #dde6ed !important; }
+/* item sélectionné : fond bleu léger + texte bleu marine foncé */
+html.light aside .bg-blue-500\/15  { background-color: rgba(12,58,94,0.12) !important; }
+html.light aside .text-blue-300    { color: #010c17 !important; }
+
+/* ── Amber text → quasi-noir en mode clair ── */
+html.light .text-amber-300,
+html.light .text-amber-400,
+html.light .text-amber-500,
+html.light .text-amber-600 { color: #010c17 !important; }
+
+/* ── Palette restreinte en mode clair : noir / blanc / vert foncé / rouge / bleu ──
+   Seules ces couleurs portent du sens (succès, danger, info) ; tout le reste
+   (violet, teal, indigo, orange, cyan…) est neutralisé en noir pour rester
+   sobre et lisible, au lieu de multiplier les teintes. */
+html.light .text-red-300,
+html.light .text-red-400    { color: #b91c1c !important; }
+html.light .text-green-300,
+html.light .text-green-400  { color: #166534 !important; }
+html.light .text-blue-300,
+html.light .text-blue-400   { color: #1d4ed8 !important; }
+html.light .text-purple-400,
+html.light .text-violet-300,
+html.light .text-violet-400,
+html.light .text-teal-400,
+html.light .text-indigo-400,
+html.light .text-orange-400,
+html.light .text-cyan-300,
+html.light .text-cyan-400   { color: #010c17 !important; }
+
+/* Fonds de badge hors palette (violet/teal/indigo/orange/cyan) → neutres, plus de teinte parasite */
+html.light .bg-purple-400\/10,
+html.light .bg-violet-400\/10,
+html.light .bg-teal-400\/10,
+html.light .bg-indigo-400\/10,
+html.light .bg-orange-400\/10,
+html.light .bg-cyan-400\/10 { background-color: #cdd9e2 !important; }
+
+/* Toast : fond volontairement sombre quel que soit le thème → texte clair conservé */
+html.light .text-green-300.bg-green-900\/90 { color: #86efac !important; }
+html.light .text-red-300.bg-red-900\/90     { color: #fca5a5 !important; }
+
+/* Boutons pleins (fond saturé) : le texte blanc doit rester blanc, pas noirci */
+html.light .bg-blue-500.text-white,
+html.light .bg-green-500.text-white,
+html.light .bg-red-500.text-white { color: #fff !important; }
+
+/* ── Tables ── */
+html.light tbody tr:hover { background-color: rgba(186,209,224,0.45) !important; }
+
+/* ── Badges / Pills slate ── */
+html.light .bg-slate-700 { background-color: #cdd9e2 !important; }
+html.light .bg-slate-700.text-slate-300,
+html.light .bg-slate-700 .text-slate-300 {
+  background-color: #cdd9e2 !important;
+  color: #1a3a52 !important;
+}
+
+/* ── PageHeader : fond quasi blanc, texte noir franc ── */
+html.light header,
+html.light .border-b.border-slate-700 {
+  border-color: var(--l-border) !important;
+}
+html.light .bg-slate-900\/50.border-b.border-slate-800 {
+  background-color: #f8fafc !important;
+}
+html.light .bg-slate-900\/50.border-b.border-slate-800 h1,
+html.light .bg-slate-900\/50.border-b.border-slate-800 p {
+  color: #000 !important;
+}

@@ -1,0 +1,31 @@
+FROM node:20-alpine AS builder
+
+RUN apk add --no-cache openssl
+
+WORKDIR /app
+
+COPY backend/package*.json ./
+COPY backend/prisma ./prisma/
+
+RUN npm install
+
+COPY backend/ ./
+
+ENV DATABASE_URL="postgresql://dummy:dummy@dummy:5432/dummy"
+RUN npm run build
+
+# ── Image finale ──
+FROM node:20-alpine
+
+RUN apk add --no-cache openssl
+
+WORKDIR /app
+
+COPY --from=builder /app/dist         ./dist
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/prisma       ./prisma
+COPY backend/package*.json ./
+
+EXPOSE 3001
+
+CMD ["node", "dist/index.js"]

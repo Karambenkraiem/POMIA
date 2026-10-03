@@ -1,0 +1,819 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum RoleUtilisateur {
+  operateur
+  chef_bloc
+  chef_quart
+  chef_exploitation
+  chef_centrale
+  chef_maintenance
+  directeur
+  guest
+  statistique
+  md_center_assistant
+  admin
+
+  @@map("role_utilisateur")
+}
+
+enum FrequenceEssai {
+  journalier
+  hebdomadaire
+  mensuelle
+  semestrielle
+  annuelle
+
+  @@map("frequence_essai")
+}
+
+enum TypeReleveEssai {
+  valeur
+  potentiometre
+  niveaumetre
+  selection
+
+  @@map("type_releve_essai")
+}
+
+enum StatutEssai {
+  a_faire
+  effectue
+  annule
+
+  @@map("statut_essai")
+}
+
+enum TrancheHoraire {
+  h00_07h @map("00h_07h")
+  h07_14h @map("07h_14h")
+  h14_20h @map("14h_20h")
+  h20_00h @map("20h_00h")
+
+  @@map("tranche_horaire")
+}
+
+enum StatutJournee {
+  en_cours
+  valide_bloc
+  valide_quart
+  transmis
+
+  @@map("statut_journee")
+}
+
+enum StatutPoste {
+  en_cours
+  termine
+  valide
+
+  @@map("statut_poste")
+}
+
+enum TypeManouvre {
+  exploitation
+  entretien
+  permutation
+  agc
+  incident
+
+  @@map("type_manouvre")
+}
+
+enum NaturePuissance {
+  PMC
+  AGC
+  PMS
+  PRESELECT
+  BASE
+
+  @@map("nature_puissance")
+}
+
+enum EtatOT {
+  en_cours
+  termine
+  reporte
+  annule
+
+  @@map("etat_ot")
+}
+
+enum DisciplineOT {
+  mec
+  elec
+  inst
+  civil
+  autre
+
+  @@map("discipline_ot")
+}
+
+enum TypeMaintenance {
+  curatif
+  systematique
+  preventif
+
+  @@map("type_maintenance")
+}
+
+enum ZoneMateriel {
+  site
+  tg
+  alternateur
+  auxiliaires
+
+  @@map("zone_materiel")
+}
+
+enum StatutDefaut {
+  ouvert
+  en_cours
+  cloture
+
+  @@map("statut_defaut")
+}
+
+model Utilisateur {
+  id                String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  nom               String          @db.VarChar(100)
+  prenom            String          @db.VarChar(100)
+  matricule         String          @unique @db.VarChar(20)
+  role              RoleUtilisateur
+  mot_de_passe_hash String          @db.Text
+  actif             Boolean         @default(true)
+  cree_le           DateTime        @default(now()) @db.Timestamptz(6)
+  modifie_le        DateTime        @default(now()) @db.Timestamptz(6)
+
+  journeesValideesBloc  Journee[]         @relation("ValideBlocPar")
+  journeesValideesQuart Journee[]         @relation("ValideQuartPar")
+  postesChefQuart       Poste[]           @relation("ChefQuart")
+  postesChefBloc        Poste[]           @relation("ChefBloc")
+  postesOp1             Poste[]           @relation("Operateur1")
+  postesOp2             Poste[]           @relation("Operateur2")
+  releves_bloc          RelevesChefBloc[]
+  releves_op            RelevesOperateur[]
+  manouvres             Manouvre[]
+  seuilsModifies        SeuilAlarme[]
+  defautsCommentes      MaterielDefectueux[] @relation("CommentaireAuteur")
+  essaisEffectues       EssaiInstance[]      @relation("EssaiExecutant")
+  messagesEnvoyes       Message[]            @relation("MessagesEnvoyes")
+  messagesRecus         Message[]            @relation("MessagesRecus")
+  consignesCreees       Consigne[]
+  reclamationsDemandees Reclamation[]            @relation("ReclamationDemandeur")
+  reclamationsCloturees Reclamation[]            @relation("ReclamationCloture")
+  reclamationsCommentees ReclamationCommentaire[]
+
+  @@map("utilisateurs")
+}
+
+model Journee {
+  id                    String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  jour                  DateTime      @unique @db.Date
+  statut                StatutJournee @default(en_cours)
+  consignes_permanentes String?       @db.Text
+  valide_bloc_par       String?       @db.Uuid
+  valide_bloc_le        DateTime?     @db.Timestamptz(6)
+  valide_quart_par      String?       @db.Uuid
+  valide_quart_le       DateTime?     @db.Timestamptz(6)
+  transmis_le           DateTime?     @db.Timestamptz(6)
+  cree_le               DateTime      @default(now()) @db.Timestamptz(6)
+
+  valideBlocUser   Utilisateur?       @relation("ValideBlocPar", fields: [valide_bloc_par], references: [id])
+  valideQuartUser  Utilisateur?       @relation("ValideQuartPar", fields: [valide_quart_par], references: [id])
+  postes           Poste[]
+  releves_bloc     RelevesChefBloc[]
+  releves_op       RelevesOperateur[]
+  compteurs        CompteursJournaliers?
+  manouvres        Manouvre[]
+  alarmes          Alarme[]
+  ordres_travaux   OrdreTravaux[]
+  demandes_service DemandeService[]
+  essais           EssaiInstance[]
+
+  @@map("journees")
+}
+
+model Poste {
+  id            String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  journee_id    String         @db.Uuid
+  tranche       TrancheHoraire
+  debut         DateTime       @db.Timestamptz(6)
+  fin           DateTime       @db.Timestamptz(6)
+  chef_quart_id String?        @db.Uuid
+  chef_bloc_id  String?        @db.Uuid
+  operateur1_id String?        @db.Uuid
+  operateur2_id String?        @db.Uuid
+  statut        StatutPoste    @default(en_cours)
+
+  journee     Journee          @relation(fields: [journee_id], references: [id], onDelete: Cascade)
+  chefQuart   Utilisateur?     @relation("ChefQuart", fields: [chef_quart_id], references: [id])
+  chefBloc    Utilisateur?     @relation("ChefBloc", fields: [chef_bloc_id], references: [id])
+  operateur1  Utilisateur?     @relation("Operateur1", fields: [operateur1_id], references: [id])
+  operateur2  Utilisateur?     @relation("Operateur2", fields: [operateur2_id], references: [id])
+  releves_bloc RelevesChefBloc[]
+  releves_op   RelevesOperateur[]
+  manouvres    Manouvre[]
+  alarmes      Alarme[]
+
+  @@unique([journee_id, tranche])
+  @@map("postes")
+}
+
+model RelevesChefBloc {
+  id                        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  journee_id                String    @db.Uuid
+  poste_id                  String?   @db.Uuid
+  saisi_par                 String    @db.Uuid
+  heure_releve              DateTime  @db.Timestamptz(6)
+  temp_ambiante_ctim        Decimal?  @db.Decimal(6, 2)
+  pression_atm_afpap        Decimal?  @db.Decimal(8, 2)
+  humidite_rhum             Decimal?  @db.Decimal(5, 2)
+  dp_filtre_totale_tfdp     Decimal?  @db.Decimal(7, 2)
+  dp_admis_comp_csdp        Decimal?  @db.Decimal(7, 2)
+  dp_admission_afpcs        Decimal?  @db.Decimal(7, 2)
+  temp_tunnel_ttib1         Decimal?  @db.Decimal(6, 2)
+  temp_air_atomisation      Decimal?  @db.Decimal(6, 2)
+  vitesse_turbine_rpm       Decimal?  @db.Decimal(8, 2)
+  position_tmgv_deg         Decimal?  @db.Decimal(6, 3)
+  position_igv_deg          Decimal?  @db.Decimal(6, 3)
+  tension_ligne_kv          Decimal?  @db.Decimal(7, 3)
+  temp_entree_aeroref_wtad  Decimal?  @db.Decimal(6, 2)
+  temp_sortie_aeroref_wtad  Decimal?  @db.Decimal(6, 2)
+  temp_patte_turbine1_wttl1 Decimal?  @db.Decimal(6, 2)
+  temp_patte_turbine2_wttl2 Decimal?  @db.Decimal(6, 2)
+  temp_gaz_ftg_tkg          Decimal?  @db.Decimal(6, 2)
+  press_skid_gaz_fpgi       Decimal?  @db.Decimal(7, 3)
+  press_avant_srv_fgup      Decimal?  @db.Decimal(7, 3)
+  press_inter_vanne_fpg2    Decimal?  @db.Decimal(7, 3)
+  debit_massique_fqgm       Decimal?  @db.Decimal(8, 3)
+  signal_reference_fsr      Decimal?  @db.Decimal(6, 2)
+  press_refoul_cpd          Decimal?  @db.Decimal(7, 3)
+  temp_entree_comp_ctifr    Decimal?  @db.Decimal(6, 2)
+  temp_sortie_ctd           Decimal?  @db.Decimal(6, 2)
+  debit_massique_comp       Decimal?  @db.Decimal(8, 3)
+  synced                    Boolean   @default(false)
+  deverrouille              Boolean   @default(false)
+  cree_le                   DateTime  @default(now()) @db.Timestamptz(6)
+
+  journee     Journee              @relation(fields: [journee_id], references: [id], onDelete: Cascade)
+  poste       Poste?               @relation(fields: [poste_id], references: [id])
+  saiseur     Utilisateur          @relation(fields: [saisi_par], references: [id])
+  generateur  RelevesGenerateur?
+  huile       RelevesHuile?
+  vibrations  RelevesVibrations?
+  echappement RelevesEchappement?
+  metal_blanc RelevesMetalBlanc?
+
+  @@unique([journee_id, heure_releve])
+  @@map("releves_chef_bloc")
+}
+
+model RelevesGenerateur {
+  id                      String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  releve_id               String   @unique @db.Uuid
+  puissance_active_mw     Decimal? @db.Decimal(7, 2)
+  puissance_reactive_mvar Decimal? @db.Decimal(7, 2)
+  frequence_hz            Decimal? @db.Decimal(6, 3)
+  cos_phi                 Decimal? @db.Decimal(5, 3)
+  tension_alt_dvx_kv      Decimal? @db.Decimal(7, 3)
+  tension_svlx_kv         Decimal? @db.Decimal(7, 3)
+  tension_excitation_v    Decimal? @db.Decimal(8, 2)
+  courant_excitation_a    Decimal? @db.Decimal(8, 2)
+  temp_air_froid_a_gca1   Decimal? @db.Decimal(6, 2)
+  temp_air_froid_b_gca2   Decimal? @db.Decimal(6, 2)
+  temp_air_chaud_c_gha1   Decimal? @db.Decimal(6, 2)
+  temp_air_chaud_d_gha2   Decimal? @db.Decimal(6, 2)
+  temp_stator_e_gst1      Decimal? @db.Decimal(6, 2)
+  temp_stator_f_gst2      Decimal? @db.Decimal(6, 2)
+  temp_stator_g_gst3      Decimal? @db.Decimal(6, 2)
+  temp_stator_h_gst4      Decimal? @db.Decimal(6, 2)
+  temp_stator_i_gst5      Decimal? @db.Decimal(6, 2)
+  temp_stator_j_gst6      Decimal? @db.Decimal(6, 2)
+  temp_stator_k_gst7      Decimal? @db.Decimal(6, 2)
+  temp_stator_l_gst8      Decimal? @db.Decimal(6, 2)
+  temp_stator_m_gst9      Decimal? @db.Decimal(6, 2)
+  temp_air_excitation_gext Decimal? @db.Decimal(6, 2)
+
+  releve RelevesChefBloc @relation(fields: [releve_id], references: [id], onDelete: Cascade)
+
+  @@map("releves_generateur")
+}
+
+model RelevesHuile {
+  id                     String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  releve_id              String   @unique @db.Uuid
+  niveau_bac_huile_mm    Decimal? @db.Decimal(7, 2)
+  pression_qap3_bar      Decimal? @db.Decimal(6, 3)
+  pression_palier5_qgp   Decimal? @db.Decimal(6, 3)
+  temp_collecteur_ltth   Decimal? @db.Decimal(6, 2)
+  temp_cuve1_ltot1       Decimal? @db.Decimal(6, 2)
+  temp_cuve2_ltot2       Decimal? @db.Decimal(6, 2)
+  temp_butee_ltbt1d      Decimal? @db.Decimal(6, 2)
+  temp_palier1_ltb1d     Decimal? @db.Decimal(6, 2)
+  temp_palier2_ltb2d     Decimal? @db.Decimal(6, 2)
+  temp_palier3_ltb3d     Decimal? @db.Decimal(6, 2)
+  temp_palier4_lttg1d    Decimal? @db.Decimal(6, 2)
+  temp_palier5_ltg2d     Decimal? @db.Decimal(6, 2)
+  press_pompe_hp_attelee Decimal? @db.Decimal(6, 3)
+  press_pompe_hp_elec    Decimal? @db.Decimal(6, 3)
+
+  releve RelevesChefBloc @relation(fields: [releve_id], references: [id], onDelete: Cascade)
+
+  @@map("releves_huile")
+}
+
+model RelevesVibrations {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  releve_id      String   @unique @db.Uuid
+  palier1_bb1    Decimal? @db.Decimal(6, 3)
+  palier1_bb2    Decimal? @db.Decimal(6, 3)
+  palier2_bb3    Decimal? @db.Decimal(6, 3)
+  palier2_bb4    Decimal? @db.Decimal(6, 3)
+  palier3_bb5    Decimal? @db.Decimal(6, 3)
+  palier4_bb10   Decimal? @db.Decimal(6, 3)
+  palier4_bb11   Decimal? @db.Decimal(6, 3)
+  palier1_bb12   Decimal? @db.Decimal(6, 3)
+  vibration_maxi Decimal? @db.Decimal(6, 3)
+
+  releve RelevesChefBloc @relation(fields: [releve_id], references: [id], onDelete: Cascade)
+
+  @@map("releves_vibrations")
+}
+
+model RelevesEchappement {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  releve_id      String   @unique @db.Uuid
+  ttxm_moyenne   Decimal? @db.Decimal(7, 2)
+  ttxspl_ecart   Decimal? @db.Decimal(7, 2)
+  ttxsp1         Decimal? @db.Decimal(7, 2)
+  ttxsp2         Decimal? @db.Decimal(7, 2)
+  ttxsp3         Decimal? @db.Decimal(7, 2)
+  ttxd_01        Decimal? @db.Decimal(7, 2)
+  ttxd_02        Decimal? @db.Decimal(7, 2)
+  ttxd_03        Decimal? @db.Decimal(7, 2)
+  ttxd_04        Decimal? @db.Decimal(7, 2)
+  ttxd_05        Decimal? @db.Decimal(7, 2)
+  ttxd_06        Decimal? @db.Decimal(7, 2)
+  ttxd_07        Decimal? @db.Decimal(7, 2)
+  ttxd_08        Decimal? @db.Decimal(7, 2)
+  ttxd_09        Decimal? @db.Decimal(7, 2)
+  ttxd_10        Decimal? @db.Decimal(7, 2)
+  ttxd_11        Decimal? @db.Decimal(7, 2)
+  ttxd_12        Decimal? @db.Decimal(7, 2)
+  ttxd_13        Decimal? @db.Decimal(7, 2)
+  ttxd_14        Decimal? @db.Decimal(7, 2)
+  ttxd_15        Decimal? @db.Decimal(7, 2)
+  ttxd_16        Decimal? @db.Decimal(7, 2)
+  ttxd_17        Decimal? @db.Decimal(7, 2)
+  ttxd_18        Decimal? @db.Decimal(7, 2)
+  ttxd_19        Decimal? @db.Decimal(7, 2)
+  ttxd_20        Decimal? @db.Decimal(7, 2)
+  ttxd_21        Decimal? @db.Decimal(7, 2)
+  ttxd_22        Decimal? @db.Decimal(7, 2)
+  ttxd_23        Decimal? @db.Decimal(7, 2)
+  ttxd_24        Decimal? @db.Decimal(7, 2)
+  spread_calcule Decimal? @db.Decimal(7, 2)
+
+  releve RelevesChefBloc @relation(fields: [releve_id], references: [id], onDelete: Cascade)
+
+  @@map("releves_echappement")
+}
+
+model RelevesMetalBlanc {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  releve_id String   @unique @db.Uuid
+  btta1_2   Decimal? @db.Decimal(6, 2)
+  btta1_5   Decimal? @db.Decimal(6, 2)
+  btta1_8   Decimal? @db.Decimal(6, 2)
+  btti1_2   Decimal? @db.Decimal(6, 2)
+  btti1_5   Decimal? @db.Decimal(6, 2)
+  btti1_9   Decimal? @db.Decimal(6, 2)
+  btj1_1    Decimal? @db.Decimal(6, 2)
+  btj1_2    Decimal? @db.Decimal(6, 2)
+  btj2_1    Decimal? @db.Decimal(6, 2)
+  btj2_2    Decimal? @db.Decimal(6, 2)
+  btj3_1    Decimal? @db.Decimal(6, 2)
+  btj3_2    Decimal? @db.Decimal(6, 2)
+  btgj1_1_p4 Decimal? @db.Decimal(6, 2)
+  btgj1_1_p5 Decimal? @db.Decimal(6, 2)
+  ttws1fi1  Decimal? @db.Decimal(6, 2)
+  ttws1fi2  Decimal? @db.Decimal(6, 2)
+  ttws1_01  Decimal? @db.Decimal(6, 2)
+  ttws1_02  Decimal? @db.Decimal(6, 2)
+  ttws2f01  Decimal? @db.Decimal(6, 2)
+  ttws2f02  Decimal? @db.Decimal(6, 2)
+  ttws2a01  Decimal? @db.Decimal(6, 2)
+  ttws2a02  Decimal? @db.Decimal(6, 2)
+  ttws3f01  Decimal? @db.Decimal(6, 2)
+  ttws3f02  Decimal? @db.Decimal(6, 2)
+  ttws3a01  Decimal? @db.Decimal(6, 2)
+  ttws3a02  Decimal? @db.Decimal(6, 2)
+
+  releve RelevesChefBloc @relation(fields: [releve_id], references: [id], onDelete: Cascade)
+
+  @@map("releves_metal_blanc")
+}
+
+model RelevesOperateur {
+  id                          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  journee_id                  String   @db.Uuid
+  poste_id                    String?  @db.Uuid
+  saisi_par                   String?  @db.Uuid
+  heure_releve                DateTime @db.Timestamptz(6)
+  choix_pompe                 String?  @db.VarChar(10)
+  pression_refoul_pompe_bar   Decimal? @db.Decimal(6, 3)
+  nb_ventilateurs_service     Int?     @db.SmallInt
+  temp_entree_ref_wtad1       Decimal? @db.Decimal(6, 2)
+  temp_sortie_ref_wtad2       Decimal? @db.Decimal(6, 2)
+  pression_retour_eau_ref     Decimal? @db.Decimal(6, 3)
+  pression_sortie_ref_alt     Decimal? @db.Decimal(6, 3)
+  niveau_reservoir_expansion  Decimal? @db.Decimal(6, 2)
+  temp_gaz_ftg_tkg            Decimal? @db.Decimal(6, 2)
+  pression_gaz_fpgi_bar       Decimal? @db.Decimal(6, 3)
+  dp_filtre_gaz_bar           Decimal? @db.Decimal(6, 3)
+  pression_entree_skid        Decimal? @db.Decimal(6, 3)
+  dp_filtre_gasoil_bar        Decimal? @db.Decimal(6, 3)
+  niveau_huile_reservoir      Decimal? @db.Decimal(6, 2)
+  choix_filtre_huile          String?  @db.VarChar(10)
+  choix_refrigerant_huile     String?  @db.VarChar(10)
+  pression_air_atomisation    Decimal? @db.Decimal(6, 3)
+  dp_totale_filtre_kpa        Decimal? @db.Decimal(7, 3)
+  dp_pre_filtre_kpa           Decimal? @db.Decimal(7, 3)
+  dp_filtre_kpa               Decimal? @db.Decimal(7, 3)
+  pression_air_comprime_bar   Decimal? @db.Decimal(6, 3)
+  temp_huile_tp               Decimal? @db.Decimal(6, 2)
+  temp_enroulement_tp         Decimal? @db.Decimal(6, 2)
+  niv_conservateur_tp         Decimal? @db.Decimal(6, 2)
+  choix_ventilateur_tp        String?  @db.VarChar(10)
+  temp_huile_ts               Decimal? @db.Decimal(6, 2)
+  temp_enroulement_ts         Decimal? @db.Decimal(6, 2)
+  niv_conservateur_ts         Decimal? @db.Decimal(6, 2)
+  pression_circuit_incendie   Decimal? @db.Decimal(6, 3)
+  niveau_gasoil_ppe_pct       Decimal? @db.Decimal(5, 2)
+  pompe_jockey                String?  @db.VarChar(10)
+  compteur_gasoil_ge_l        Decimal? @db.Decimal(10, 2)
+  compteur_energie_ge_kwh     Decimal? @db.Decimal(12, 2)
+  stock_gasoil_l              Decimal? @db.Decimal(10, 2)
+  temp_huile_graissage_ge     Decimal? @db.Decimal(6, 2)
+  pression_huile_graissage_ge Decimal? @db.Decimal(6, 3)
+  temp_eau_primaire_ge        Decimal? @db.Decimal(6, 2)
+  temp_eau_secondaire_ge      Decimal? @db.Decimal(6, 2)
+  pression_air_demarrage_ge   Decimal? @db.Decimal(6, 3)
+  nb_heures_marche_ge         Decimal? @db.Decimal(8, 2)
+  detecteurs_gaz              Json     @default("{}")
+  energie_active_index_0h     Decimal? @db.Decimal(12, 3)
+  energie_active_index_24h    Decimal? @db.Decimal(12, 3)
+  reactif_absorbe_0h          Decimal? @db.Decimal(12, 3)
+  reactif_absorbe_24h         Decimal? @db.Decimal(12, 3)
+  reactif_fourni_0h           Decimal? @db.Decimal(12, 3)
+  reactif_fourni_24h          Decimal? @db.Decimal(12, 3)
+  conso_aux_ht_tag_0h         Decimal? @db.Decimal(12, 3)
+  conso_aux_ht_tag_24h        Decimal? @db.Decimal(12, 3)
+  conso_aux_ht_site_0h        Decimal? @db.Decimal(12, 3)
+  conso_aux_ht_site_24h       Decimal? @db.Decimal(12, 3)
+  gasoil_0h_l                 Decimal? @db.Decimal(10, 2)
+  gasoil_24h_l                Decimal? @db.Decimal(10, 2)
+  consignes_particulieres     String?  @db.Text
+  synced                      Boolean  @default(false)
+  deverrouille                Boolean  @default(false)
+  cree_le                     DateTime @default(now()) @db.Timestamptz(6)
+
+  journee Journee      @relation(fields: [journee_id], references: [id], onDelete: Cascade)
+  poste   Poste?       @relation(fields: [poste_id], references: [id])
+  saiseur Utilisateur? @relation(fields: [saisi_par], references: [id])
+
+  @@unique([journee_id, heure_releve])
+  @@map("releves_operateur")
+}
+
+model CompteursJournaliers {
+  id                   String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  journee_id           String          @unique @db.Uuid
+  energie_active_00h   Decimal?        @db.Decimal(12, 3)
+  energie_active_07h   Decimal?        @db.Decimal(12, 3)
+  energie_active_18h   Decimal?        @db.Decimal(12, 3)
+  energie_active_22h   Decimal?        @db.Decimal(12, 3)
+  energie_active_24h   Decimal?        @db.Decimal(12, 3)
+  reactif_fourni_00h   Decimal?        @db.Decimal(12, 3)
+  reactif_fourni_07h   Decimal?        @db.Decimal(12, 3)
+  reactif_fourni_18h   Decimal?        @db.Decimal(12, 3)
+  reactif_fourni_22h   Decimal?        @db.Decimal(12, 3)
+  reactif_fourni_24h   Decimal?        @db.Decimal(12, 3)
+  reactif_absorbe_00h  Decimal?        @db.Decimal(12, 3)
+  reactif_absorbe_07h  Decimal?        @db.Decimal(12, 3)
+  reactif_absorbe_18h  Decimal?        @db.Decimal(12, 3)
+  reactif_absorbe_22h  Decimal?        @db.Decimal(12, 3)
+  reactif_absorbe_24h  Decimal?        @db.Decimal(12, 3)
+  auxiliaires_00h      Decimal?        @db.Decimal(12, 3)
+  auxiliaires_07h      Decimal?        @db.Decimal(12, 3)
+  auxiliaires_18h      Decimal?        @db.Decimal(12, 3)
+  auxiliaires_22h      Decimal?        @db.Decimal(12, 3)
+  auxiliaires_24h      Decimal?        @db.Decimal(12, 3)
+  gaz_00h_nm3          Decimal?        @db.Decimal(14, 2)
+  gaz_24h_nm3          Decimal?        @db.Decimal(14, 2)
+  gasoil_00h_l         Decimal?        @db.Decimal(10, 2)
+  gasoil_07h_l         Decimal?        @db.Decimal(10, 2)
+  gasoil_18h_l         Decimal?        @db.Decimal(10, 2)
+  gasoil_22h_l         Decimal?        @db.Decimal(10, 2)
+  gasoil_24h_l         Decimal?        @db.Decimal(10, 2)
+  h_flamme_00h         Decimal?        @db.Decimal(8, 1)
+  h_flamme_24h         Decimal?        @db.Decimal(8, 1)
+  h_pms_00h            Decimal?        @db.Decimal(8, 1)
+  h_pms_24h            Decimal?        @db.Decimal(8, 1)
+  h_gaz_00h            Decimal?        @db.Decimal(8, 1)
+  h_gaz_24h            Decimal?        @db.Decimal(8, 1)
+  h_gasoil_00h         Decimal?        @db.Decimal(8, 1)
+  h_gasoil_24h         Decimal?        @db.Decimal(8, 1)
+  dem_manuel_00h       Int?
+  dem_manuel_24h       Int?
+  dem_total_00h        Int?
+  dem_total_24h        Int?
+  dem_rapide_00h       Int?
+  dem_rapide_24h       Int?
+  allumage_00h         Int?
+  allumage_24h         Int?
+  declenchement_00h    Int?
+  declenchement_24h    Int?
+  energie_jour_mwh     Decimal?        @db.Decimal(10, 3)
+  energie_pointe_mwh   Decimal?        @db.Decimal(10, 3)
+  energie_nuit_mwh     Decimal?        @db.Decimal(10, 3)
+  puissance_max_mw     Decimal?        @db.Decimal(7, 2)
+  heure_puissance_max  String?         @db.VarChar(6)
+  temp_amb_puissance_max Decimal?      @db.Decimal(5, 1)
+  nature_puissance_max NaturePuissance?
+  conso_aux_couplage   Decimal?        @db.Decimal(12, 3)
+  conso_aux_decouplage Decimal?        @db.Decimal(12, 3)
+  conso_aux_cycles     Json            @default("[]")
+  aux_gre_couplage     Decimal?        @db.Decimal(12, 3)
+  aux_gre_decouplage   Decimal?        @db.Decimal(12, 3)
+  cree_le              DateTime        @default(now()) @db.Timestamptz(6)
+
+  journee Journee @relation(fields: [journee_id], references: [id], onDelete: Cascade)
+
+  @@map("compteurs_journaliers")
+}
+
+model Manouvre {
+  id             String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  journee_id     String       @db.Uuid
+  poste_id       String?      @db.Uuid
+  saisi_par      String       @db.Uuid
+  heure_manouvre DateTime     @db.Timestamptz(6)
+  description    String       @db.Text
+  type_manouvre  TypeManouvre @default(exploitation)
+  feuille_numero Int          @default(1) @db.SmallInt
+  cree_le        DateTime     @default(now()) @db.Timestamptz(6)
+
+  journee Journee      @relation(fields: [journee_id], references: [id], onDelete: Cascade)
+  poste   Poste?       @relation(fields: [poste_id], references: [id])
+  saiseur Utilisateur  @relation(fields: [saisi_par], references: [id])
+
+  @@map("manouvres")
+}
+
+model Alarme {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  journee_id String    @db.Uuid
+  poste_id   String?   @db.Uuid
+  tag        String?   @db.VarChar(50)
+  designation String   @db.Text
+  equipement String?   @db.VarChar(100)
+  heure      DateTime? @db.Timestamptz(6)
+  origine    String    @default("HMI") @db.VarChar(20)
+  repetitive Boolean   @default(false)
+  premiere_apparition DateTime? @db.Date
+  cree_le    DateTime  @default(now()) @db.Timestamptz(6)
+
+  journee Journee @relation(fields: [journee_id], references: [id], onDelete: Cascade)
+  poste   Poste?  @relation(fields: [poste_id], references: [id])
+
+  @@map("alarmes")
+}
+
+model OrdreTravaux {
+  id               String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  journee_id       String          @db.Uuid
+  numero_ot        String?         @db.VarChar(20)
+  kks_equipement   String?         @db.VarChar(50)
+  description      String          @db.Text
+  date_debut       DateTime?       @db.Date
+  date_fin         DateTime?       @db.Date
+  etat             EtatOT          @default(en_cours)
+  discipline       DisciplineOT?
+  type_maintenance TypeMaintenance
+  cree_le          DateTime        @default(now()) @db.Timestamptz(6)
+
+  journee Journee @relation(fields: [journee_id], references: [id], onDelete: Cascade)
+
+  @@map("ordres_travaux")
+}
+
+model DemandeService {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  journee_id String   @db.Uuid
+  numero_ds  String?  @unique @db.VarChar(20)
+  urgence    Int?     @db.SmallInt
+  description String  @db.Text
+  cree_le    DateTime @default(now()) @db.Timestamptz(6)
+
+  journee Journee @relation(fields: [journee_id], references: [id], onDelete: Cascade)
+
+  @@map("demandes_service")
+}
+
+model MaterielDefectueux {
+  id               String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  kks_equipement   String       @db.VarChar(50)
+  description      String       @db.Text
+  zone             ZoneMateriel
+  date_declaration DateTime     @db.Date
+  date_cloture     DateTime?    @db.Date
+  commentaires     String?      @db.Text
+  commentaire_par  String?      @db.Uuid
+  commentaire_le   DateTime?    @db.Timestamptz(6)
+  statut           StatutDefaut @default(ouvert)
+  actif            Boolean?
+  cree_le          DateTime     @default(now()) @db.Timestamptz(6)
+  modifie_le       DateTime     @default(now()) @db.Timestamptz(6)
+
+  commentaireAuteur Utilisateur? @relation("CommentaireAuteur", fields: [commentaire_par], references: [id])
+
+  @@map("materiels_defectueux")
+}
+
+model SeuilAlarme {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  parametre   String   @unique @db.VarChar(100)
+  valeur_min  Decimal? @db.Decimal(10, 3)
+  valeur_max  Decimal? @db.Decimal(10, 3)
+  unite       String?  @db.VarChar(20)
+  description String?  @db.Text
+  actif       Boolean  @default(true)
+  modifie_par String?  @db.Uuid
+  modifie_le  DateTime @default(now()) @db.Timestamptz(6)
+
+  modificateur Utilisateur? @relation(fields: [modifie_par], references: [id])
+
+  @@map("seuils_alarme")
+}
+
+model ActivityLog {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  utilisateur_id String?  @db.Uuid
+  matricule      String?  @db.VarChar(20)
+  nom_complet    String?  @db.VarChar(200)
+  role           String?  @db.VarChar(50)
+  methode        String   @db.VarChar(10)
+  route          String   @db.Text
+  statut         Int
+  ip             String?  @db.VarChar(64)
+  cree_le        DateTime @default(now()) @db.Timestamptz(6)
+
+  @@map("activity_logs")
+  @@index([cree_le])
+  @@index([utilisateur_id])
+}
+
+// ESSAIS PÉRIODIQUES — paramétrés par le chef d'exploitation, déclenchés
+// automatiquement à la création de chaque journée.
+
+model EssaiConfig {
+  id                 String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  nom                String         @db.VarChar(200)
+  frequence          FrequenceEssai
+  jours_semaine      Int[]          @default([])
+  actif              Boolean        @default(true)
+  derniere_execution DateTime?      @db.Date
+  cree_le            DateTime       @default(now()) @db.Timestamptz(6)
+  modifie_le         DateTime       @default(now()) @db.Timestamptz(6)
+
+  releves   EssaiReleveConfig[]
+  instances EssaiInstance[]
+
+  @@map("essais_config")
+}
+
+model EssaiReleveConfig {
+  id       String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  essai_id String          @db.Uuid
+  nom      String          @db.VarChar(200)
+  type     TypeReleveEssai
+  unite    String?         @db.VarChar(20)
+  options  Json?
+  ordre    Int             @default(0)
+
+  essai EssaiConfig @relation(fields: [essai_id], references: [id], onDelete: Cascade)
+
+  @@map("essais_releve_config")
+}
+
+model EssaiInstance {
+  id               String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  essai_id         String      @db.Uuid
+  journee_id       String      @db.Uuid
+  statut           StatutEssai @default(a_faire)
+  motif_annulation String?     @db.Text
+  effectue_par     String?     @db.Uuid
+  effectue_le      DateTime?   @db.Timestamptz(6)
+  valeurs          Json        @default("{}")
+  deverrouille     Boolean     @default(false)
+  cree_le          DateTime    @default(now()) @db.Timestamptz(6)
+
+  essai     EssaiConfig  @relation(fields: [essai_id], references: [id])
+  journee   Journee      @relation(fields: [journee_id], references: [id], onDelete: Cascade)
+  executant Utilisateur? @relation("EssaiExecutant", fields: [effectue_par], references: [id])
+
+  @@unique([essai_id, journee_id])
+  @@map("essais_instance")
+}
+
+// ── Messagerie interne (chat privé entre agents) ──
+model Message {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  expediteur_id   String   @db.Uuid
+  destinataire_id String   @db.Uuid
+  contenu         String   @db.Text
+  piece_jointe_nom  String? @db.VarChar(255)
+  piece_jointe_type String? @db.VarChar(100)
+  piece_jointe_data Bytes?
+  lu              Boolean  @default(false)
+  cree_le         DateTime @default(now()) @db.Timestamptz(6)
+
+  expediteur   Utilisateur @relation("MessagesEnvoyes", fields: [expediteur_id], references: [id])
+  destinataire Utilisateur @relation("MessagesRecus", fields: [destinataire_id], references: [id])
+
+  @@index([expediteur_id, destinataire_id])
+  @@index([destinataire_id, lu])
+  @@map("messages")
+}
+
+// ── Consignes du jour (chef exploitation / chef de quart) ──
+model Consigne {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  texte      String   @db.Text
+  terminee   Boolean  @default(false)
+  cree_par   String   @db.Uuid
+  date       DateTime @default(now()) @db.Timestamptz(6)
+  cree_le    DateTime @default(now()) @db.Timestamptz(6)
+  modifie_le DateTime @default(now()) @db.Timestamptz(6)
+
+  auteur Utilisateur @relation(fields: [cree_par], references: [id])
+
+  @@map("consignes")
+}
+
+enum StatutReclamation {
+  ouverte
+  en_cours
+  cloturee
+
+  @@map("statut_reclamation")
+}
+
+// ── Réclamations / demandes d'assistance MD Center ──
+model Reclamation {
+  id           String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  titre        String            @db.VarChar(200)
+  description  String            @db.Text
+  statut       StatutReclamation @default(ouverte)
+  demandeur_id String            @db.Uuid
+  cloture_par  String?           @db.Uuid
+  cloture_le   DateTime?         @db.Timestamptz(6)
+  motif_cloture String?          @db.Text
+  piece_jointe_nom  String?      @db.VarChar(255)
+  piece_jointe_type String?      @db.VarChar(100)
+  piece_jointe_data Bytes?
+  cree_le      DateTime          @default(now()) @db.Timestamptz(6)
+  modifie_le   DateTime          @default(now()) @db.Timestamptz(6)
+
+  demandeur    Utilisateur              @relation("ReclamationDemandeur", fields: [demandeur_id], references: [id])
+  clotureur    Utilisateur?             @relation("ReclamationCloture", fields: [cloture_par], references: [id])
+  commentaires ReclamationCommentaire[]
+
+  @@map("reclamations")
+}
+
+model ReclamationCommentaire {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  reclamation_id String   @db.Uuid
+  auteur_id      String   @db.Uuid
+  contenu        String   @db.Text
+  piece_jointe_nom  String?  @db.VarChar(255)
+  piece_jointe_type String?  @db.VarChar(100)
+  piece_jointe_data Bytes?
+  cree_le        DateTime @default(now()) @db.Timestamptz(6)
+
+  reclamation Reclamation @relation(fields: [reclamation_id], references: [id], onDelete: Cascade)
+  auteur      Utilisateur @relation(fields: [auteur_id], references: [id])
+
+  @@map("reclamations_commentaires")
+}
+

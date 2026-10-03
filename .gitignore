@@ -1,0 +1,26 @@
+# Environnement
+.env
+*.env.local
+docker-compose.override.yml
+
+# Node
+node_modules/
+dist/
+build/
+package-lock.json
+
+# Logs
+*.log
+npm-debug.log*
+
+# Docker volumes (ne pas versionner les données)
+postgres_data/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE / outils
+.claude/
+.vscode/
+*.swp
