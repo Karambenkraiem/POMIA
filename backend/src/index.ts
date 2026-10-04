@@ -21,6 +21,7 @@ import messagesRouter from './routes/messages';
 import consignesRouter from './routes/consignes';
 import reclamationsRouter from './routes/reclamations';
 import visitesRouter from './routes/visites';
+import demoRouter from './routes/demo';
 import { activityLogger } from './middleware/activityLog';
 import { startReleveCron } from './cron';
 
@@ -60,6 +61,7 @@ app.use('/api/messages', messagesRouter);
 app.use('/api/consignes', consignesRouter);
 app.use('/api/reclamations', reclamationsRouter);
 app.use('/api/visites', visitesRouter);
+app.use('/api/demo', demoRouter);
 
 app.get('/api/health', (_, res) => res.json({ status: 'ok', time: new Date() }));
 

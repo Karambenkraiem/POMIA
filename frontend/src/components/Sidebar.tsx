@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import {
   LayoutDashboard, BookOpen, ClipboardList, Activity,
   Wrench, Bell, AlertTriangle, Users, Settings, Zap, LogOut, CalendarDays, FileText,
-  Sun, Moon, History, ChevronLeft, ChevronRight, ChevronDown, LineChart, BarChart3, ClipboardCheck,
+  Sun, Moon, History, ChevronLeft, ChevronRight, ChevronDown, LineChart, BarChart3, ClipboardCheck, Database,
   NotebookPen, LifeBuoy,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
@@ -37,6 +37,7 @@ const adminItems = [
   { to: '/admin/logs', icon: History, label: 'Journal d\'activité' },
   { to: '/admin/essais', icon: ClipboardCheck, label: 'Essais (paramétrage)' },
   { to: '/admin/visites', icon: BarChart3, label: 'Visites du site', adminOnly: true },
+  { to: '/admin/donnees-demo', icon: Database, label: 'Données fictives', adminOnly: true },
 ];
 
 const COLLAPSE_KEY = 'pomia_sidebar_collapsed';

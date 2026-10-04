@@ -45,6 +45,7 @@ import EssaisConfig from './pages/admin/EssaisConfig';
 import Consignes from './pages/Consignes';
 import Reclamations from './pages/Reclamations';
 import Visites from './pages/admin/Visites';
+import DonneesDemo from './pages/admin/DonneesDemo';
 import ReclamationDetail from './pages/ReclamationDetail';
 import InstallPrompt from './components/InstallPrompt';
 import AndroidBackButton from './components/AndroidBackButton';
@@ -153,6 +154,7 @@ export default function App() {
               <Route path="essai/:essaiId" element={<EssaiHistorique />} />
               <Route path="admin/essais" element={<AdminRoute><EssaisConfig /></AdminRoute>} />
               <Route path="admin/visites" element={<AdminOnlyRoute><Visites /></AdminOnlyRoute>} />
+              <Route path="admin/donnees-demo" element={<AdminOnlyRoute><DonneesDemo /></AdminOnlyRoute>} />
               <Route path="consignes" element={<ConsigneRoute><Consignes /></ConsigneRoute>} />
               <Route path="reclamations" element={<ReclamationRoute><Reclamations /></ReclamationRoute>} />
               <Route path="reclamations/:id" element={<ReclamationRoute><ReclamationDetail /></ReclamationRoute>} />

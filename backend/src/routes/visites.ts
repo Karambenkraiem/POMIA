@@ -12,6 +12,16 @@ function jourLocal(d = new Date()) {
   return d.toISOString().slice(0, 10);
 }
 
+function navigateurDe(ua: string) {
+  if (/Edg\//.test(ua)) return 'Edge';
+  if (/OPR\/|Opera/.test(ua)) return 'Opera';
+  if (/SamsungBrowser/.test(ua)) return 'Samsung Internet';
+  if (/Firefox\//.test(ua)) return 'Firefox';
+  if (/Chrome\//.test(ua)) return 'Chrome';
+  if (/Safari\//.test(ua)) return 'Safari';
+  return 'Autre';
+}
+
 function compte(liste: { visiteur_hash: string }[]) {
   return { visites: liste.length, visiteurs: new Set(liste.map((v) => v.visiteur_hash)).size };
 }
@@ -33,6 +43,7 @@ router.post('/', async (req, res) => {
         pays: geo?.country || 'INCONNU',
         region: geo?.region || null,
         ville: geo?.city || null,
+        navigateur: navigateurDe(ua),
         visiteur_hash,
       },
     });
@@ -49,7 +60,7 @@ router.get('/stats', authenticate, requireRole('admin'), async (req, res) => {
     const debut = new Date(Date.now() - fenetre * 86400000);
     const visites = await prisma.visite.findMany({
       where: { cree_le: { gte: debut } },
-      select: { pays: true, region: true, ville: true, visiteur_hash: true, cree_le: true },
+      select: { pays: true, region: true, ville: true, navigateur: true, visiteur_hash: true, cree_le: true },
     });
 
     const debutJour = new Date();
@@ -58,10 +69,10 @@ router.get('/stats', authenticate, requireRole('admin'), async (req, res) => {
     const il30 = Date.now() - 30 * 86400000;
     const periode = visites.filter((v) => v.cree_le.getTime() >= Date.now() - jours * 86400000);
 
-    const parLieu = new Map<string, { pays: string; region: string | null; ville: string | null; visiteurs: string[] }>();
+    const parLieu = new Map<string, { pays: string; region: string | null; ville: string | null; navigateur: string | null; visiteurs: string[] }>();
     for (const v of periode) {
-      const cle = `${v.pays}|${v.region ?? ''}|${v.ville ?? ''}`;
-      const entree = parLieu.get(cle) ?? { pays: v.pays, region: v.region, ville: v.ville, visiteurs: [] };
+      const cle = `${v.pays}|${v.region ?? ''}|${v.ville ?? ''}|${v.navigateur ?? ''}`;
+      const entree = parLieu.get(cle) ?? { pays: v.pays, region: v.region, ville: v.ville, navigateur: v.navigateur, visiteurs: [] };
       entree.visiteurs.push(v.visiteur_hash);
       parLieu.set(cle, entree);
     }
@@ -77,6 +88,7 @@ router.get('/stats', authenticate, requireRole('admin'), async (req, res) => {
           pays: e.pays,
           region: e.region,
           ville: e.ville,
+          navigateur: e.navigateur,
           visites: e.visiteurs.length,
           visiteurs: new Set(e.visiteurs).size,
         }))

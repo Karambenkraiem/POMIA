@@ -241,3 +241,9 @@ export const visitesApi = {
   enregistrer: () => api.post('/visites').then((r) => r.data),
   stats: (jours: number) => api.get('/visites/stats', { params: { jours } }).then((r) => r.data),
 };
+
+// Génération de données fictives (administrateur)
+export const demoApi = {
+  statut: () => api.get('/demo/statut').then((r) => r.data),
+  generer: () => api.post('/demo/generer').then((r) => r.data),
+};

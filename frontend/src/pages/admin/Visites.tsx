@@ -7,6 +7,7 @@ interface Lieu {
   pays: string;
   region: string | null;
   ville: string | null;
+  navigateur: string | null;
   visites: number;
   visiteurs: number;
 }
@@ -83,6 +84,7 @@ export default function Visites() {
                   <th className="text-left px-4 py-2 text-cyan-300 font-semibold">Pays</th>
                   <th className="text-left px-4 py-2 text-cyan-300 font-semibold">Région</th>
                   <th className="text-left px-4 py-2 text-cyan-300 font-semibold">Ville</th>
+                  <th className="text-left px-4 py-2 text-cyan-300 font-semibold">Navigateur</th>
                   <th className="text-right px-4 py-2 text-cyan-300 font-semibold">Visites</th>
                   <th className="text-right px-4 py-2 text-cyan-300 font-semibold">Visiteurs uniques</th>
                 </tr>
@@ -99,6 +101,7 @@ export default function Visites() {
                     <td className="px-4 py-2.5 text-slate-200">{l.pays}</td>
                     <td className="px-4 py-2.5 text-slate-300">{l.region ?? '—'}</td>
                     <td className="px-4 py-2.5 text-slate-300">{l.ville ?? '—'}</td>
+                    <td className="px-4 py-2.5 text-slate-300">{l.navigateur ?? '—'}</td>
                     <td className="px-4 py-2.5 text-right font-mono text-amber-400">{l.visites}</td>
                     <td className="px-4 py-2.5 text-right font-mono text-slate-300">{l.visiteurs}</td>
                   </tr>
@@ -108,8 +111,9 @@ export default function Visites() {
           </div>
         </div>
         <p className="text-xs text-slate-500">
-          La localisation est estimée à partir de l'adresse IP (base GeoLite locale) : elle donne le pays et une
-          région approximative, pas une localisation précise.
+          La localisation est estimée à partir de l'adresse IP, au moment de la visite (base GeoLite locale) :
+          elle donne le pays et une région approximative, pas une localisation précise. L'adresse IP elle-même
+          n'est jamais enregistrée.
         </p>
       </div>
     </div>
