@@ -29,4 +29,7 @@ COPY package*.json ./
 
 EXPOSE 3001
 
-CMD ["node", "dist/index.js"]
+# Synchronise le schéma (nouvelles tables/colonnes) avant de démarrer. Sans
+# --accept-data-loss : un changement destructif est refusé, et le serveur
+# démarre quand même sur le schéma existant.
+CMD ["sh", "-c", "npx prisma db push --skip-generate; node dist/index.js"]

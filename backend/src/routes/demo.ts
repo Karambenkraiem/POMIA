@@ -21,12 +21,13 @@ router.get('/statut', (_req, res) => {
 router.post('/generer', (_req, res) => {
   if (etat.etat === 'en_cours') return res.status(409).json({ error: 'Génération déjà en cours' });
 
-  etat = { etat: 'en_cours', message: 'Génération des données fictives en cours…' };
-  genererDonneesDemo()
+  etat = { etat: 'en_cours', message: 'Suppression des données existantes puis génération des données fictives…' };
+  genererDonneesDemo({ remplacer: true })
     .then(() => {
       etat = { etat: 'termine', message: 'Données fictives générées avec succès.' };
     })
     .catch((err: Error) => {
+      console.error('[DEMO] Erreur génération:', err);
       etat = { etat: 'erreur', message: MESSAGES_ERREUR[err.message] ?? 'Erreur pendant la génération.' };
     });
 

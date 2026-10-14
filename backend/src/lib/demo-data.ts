@@ -67,10 +67,21 @@ const TRANCHES: { tranche: any; debut: number; fin: number }[] = [
   { tranche: 'h20_00h', debut: 20, fin: 24 },
 ];
 
-export async function genererDonneesDemo(): Promise<void> {
-  const existing = await prisma.journee.count();
-  if (existing > 0) throw new Error('DONNEES_PRESENTES');
+/** Supprime toutes les données d'exploitation. Les utilisateurs, les seuils,
+ *  le journal d'activité et les statistiques de visites sont conservés. */
+export async function supprimerDonneesExploitation(): Promise<void> {
+  await prisma.$transaction([
+    prisma.essaiInstance.deleteMany(),
+    prisma.essaiConfig.deleteMany(),
+    prisma.journee.deleteMany(),
+    prisma.materielDefectueux.deleteMany(),
+    prisma.consigne.deleteMany(),
+    prisma.reclamation.deleteMany(),
+    prisma.message.deleteMany(),
+  ]);
+}
 
+export async function genererDonneesDemo({ remplacer = false } = {}): Promise<void> {
   const users = await prisma.utilisateur.findMany();
   const byMatricule = Object.fromEntries(users.map((u) => [u.matricule, u]));
   const chefsQuart = users.filter((u) => u.role === 'chef_quart');
@@ -84,6 +95,12 @@ export async function genererDonneesDemo(): Promise<void> {
   if (!chefExploitation || !mdAssistant || chefsQuart.length === 0 || chefsBloc.length === 0) {
     throw new Error('UTILISATEURS_MANQUANTS');
   }
+
+  // Les utilisateurs sont vérifiés d'abord : rien n'est supprimé si la génération ne peut pas suivre.
+  if (remplacer) await supprimerDonneesExploitation();
+
+  const existing = await prisma.journee.count();
+  if (existing > 0) throw new Error('DONNEES_PRESENTES');
 
   console.log(`Génération de ${DAYS_BACK + 1} jours de données de démonstration...`);
 
